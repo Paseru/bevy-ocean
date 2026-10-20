@@ -1,0 +1,12 @@
+Textures de cette dossier (toutes sous licence CC0, domaine public) :
+
+- sand_albedo.ktx2, sand_nrh.ktx2 : "Aerial Beach 01", Poly Haven
+  https://polyhaven.com/a/aerial_beach_01
+- litter_albedo.ktx2, litter_nrh.ktx2 : "Forest Sand 01", Poly Haven
+  https://polyhaven.com/a/forrest_sand_01
+- foam.ktx2 : "Foam 001" et "Foam 003", ambientCG
+  https://ambientcg.com/view?id=Foam001 , https://ambientcg.com/view?id=Foam003
+
+Conversion : albédos normalisés (luminance moyenne 0,5), cartes "nrh" = (normale x,
+normale y, rugosité, relief) ; écume = (opacité Foam001, opacité Foam003, relief Foam001,
+relief Foam003). KTX2 RGBA8 avec mipmaps, compression zstd.

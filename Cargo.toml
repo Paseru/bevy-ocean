@@ -1,0 +1,20 @@
+[package]
+name = "mon_jeu"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# experimental_pbr_pcss : ombres douces (taille apparente du soleil)
+# bluenoise_texture : bruit bleu pour les ombres de contact (moins de grain)
+bevy = { version = "0.20.0", features = ["experimental_pbr_pcss", "bluenoise_texture"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+# La génération procédurale (île, fond marin, rochers) est faite au démarrage :
+# on optimise aussi notre propre crate pour que le lancement reste rapide.
+[profile.dev.package.mon_jeu]
+opt-level = 3

@@ -1,0 +1,16 @@
+# Réglages graphiques (modifiables aussi dans le jeu : touche Échap)
+preset = perso
+resolution = 0.70
+anticrenelage = taa
+occlusion = 3
+ombres = 2
+reflets = oui
+rayons = oui
+flou_mouvement = oui
+profondeur_champ = oui
+effets_objectif = oui
+ambiance = tropical
+luminosite = 0.00
+exposition_auto = non
+champ_vision = 55
+vsync = oui
