@@ -11,6 +11,7 @@
 //! - Échap : menu des réglages graphiques (qualité, anti-crénelage, ambiance, luminosité...),
 //!   sauvegardés dans `reglages.txt`
 
+mod aces;
 mod camera;
 mod capture;
 mod environment;
@@ -48,6 +49,7 @@ fn main() {
             ..default()
         }))
         .add_plugins((
+            aces::AcesPlugin,
             environment::EnvironmentPlugin,
             ocean::OceanPlugin,
             terrain::TerrainPlugin,
