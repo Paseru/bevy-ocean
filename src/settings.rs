@@ -30,6 +30,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PresentMode, PrimaryWindow},
 };
 
+use crate::aces::{self, Aces, Grading};
 use crate::camera::FlyCamera;
 use crate::ocean::Ocean;
 use crate::post::{FilmGrain, LensFlare};
@@ -307,6 +308,9 @@ struct Persist(bool);
 /// Paramètres d'une ambiance de couleurs.
 pub struct LookParams {
     pub tonemapping: Tonemapping,
+    /// notre rendu des tons (ACES 2.0 ou le Filmic d'Unreal, voir `aces.rs`) à la place de
+    /// celui de Bevy (`tonemapping` est alors ignoré)
+    pub aces: Option<aces::Look>,
     /// décalage d'exposition (IL) par rapport à l'exposition de base
     pub ev_offset: f32,
     pub bloom: f32,
@@ -339,6 +343,7 @@ impl LookParams {
         let mut p = match look {
             Look::Cinema => Self {
                 tonemapping: Tonemapping::AcesFitted,
+                aces: Some(aces::Look { filmic: true, blue_correction: 0.6, expand_gamut: 1.0, ..aces::Look::NONE }),
                 ev_offset: -0.8,
                 bloom: 0.4,
                 saturation: 1.22,
@@ -361,6 +366,7 @@ impl LookParams {
             },
             Look::Tropical => Self {
                 tonemapping: Tonemapping::AcesFitted,
+                aces: Some(aces::Look::NONE),
                 ev_offset: -0.95,
                 bloom: 0.35,
                 saturation: 1.2,
@@ -381,6 +387,7 @@ impl LookParams {
             },
             Look::Naturel => Self {
                 tonemapping: Tonemapping::TonyMcMapface,
+                aces: None,
                 ev_offset: 0.0,
                 bloom: 0.2,
                 saturation: 1.0,
@@ -423,7 +430,12 @@ impl LookParams {
                     "dehaze" => p.dehaze = f,
                     "warm" => p.sun_warm = f,
                     "sparkle" => p.sparkle = f,
+                    "tm" if v == "aces2" => p.aces = Some(aces::Look::NONE),
+                    "tm" if v == "filmic" => {
+                        p.aces = Some(aces::Look { filmic: true, blue_correction: 0.6, expand_gamut: 1.0, ..aces::Look::NONE })
+                    }
                     "tm" => {
+                        p.aces = None;
                         p.tonemapping = match v {
                             "aces" => Tonemapping::AcesFitted,
                             "agx" => Tonemapping::AgX,
@@ -528,8 +540,39 @@ fn apply_settings(
         if let Projection::Perspective(p) = &mut *proj {
             p.fov = s.fov.to_radians();
         }
-        *tm = look.tonemapping;
         let mut ec = commands.entity(e);
+        // rendu des tons : le nôtre (Bevy n'en fait alors aucun, l'étalonnage est fait dans
+        // `aces.wgsl`) ou celui de Bevy avec son étalonnage
+        let grading = if let Some(aces_look) = look.aces {
+            *tm = Tonemapping::None;
+            ec.insert(Aces {
+                grading: Grading {
+                    contrast: look.contrast,
+                    saturation: look.saturation,
+                    temperature: look.temperature,
+                    ..Grading::NEUTRAL
+                },
+                look: aces_look,
+            });
+            ColorGrading::default()
+        } else {
+            *tm = look.tonemapping;
+            ec.remove::<Aces>();
+            ColorGrading {
+                global: ColorGradingGlobal {
+                    temperature: look.temperature,
+                    post_saturation: look.saturation,
+                    ..default()
+                },
+                shadows: ColorGradingSection { contrast: look.contrast, ..default() },
+                midtones: ColorGradingSection { contrast: look.contrast, ..default() },
+                highlights: ColorGradingSection {
+                    contrast: look.contrast,
+                    gain: look.highlights_gain,
+                    ..default()
+                },
+            }
+        };
         ec.insert((
             Bloom {
                 intensity: look.bloom,
@@ -545,20 +588,7 @@ fn apply_settings(
                 },
                 ..Bloom::NATURAL
             },
-            ColorGrading {
-                global: ColorGradingGlobal {
-                    temperature: look.temperature,
-                    post_saturation: look.saturation,
-                    ..default()
-                },
-                shadows: ColorGradingSection { contrast: look.contrast, ..default() },
-                midtones: ColorGradingSection { contrast: look.contrast, ..default() },
-                highlights: ColorGradingSection {
-                    contrast: look.contrast,
-                    gain: look.highlights_gain,
-                    ..default()
-                },
-            },
+            grading,
         ));
         // anti-crénelage (l'occlusion ambiante exige Msaa::Off : pas de MSAA)
         ec.remove::<(TemporalAntiAliasing, TemporalJitter, MipBias, Smaa, Fxaa)>();
